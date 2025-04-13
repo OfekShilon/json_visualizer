@@ -155,7 +155,7 @@ function createTree(data, currentPath = '', lineCounter = { value: 1 }) {
             
             const valueSpan = document.createElement('span');
             valueSpan.className = isArray ? 'json-array-empty' : 'json-object-empty';
-            valueSpan.textContent = isArray ? '[]' : '{}';
+            valueSpan.textContent = ''; // Remove square brackets for empty arrays and curly braces for empty objects
             li.appendChild(valueSpan);
             ul.appendChild(li);
             return ul;
@@ -185,7 +185,15 @@ function createTree(data, currentPath = '', lineCounter = { value: 1 }) {
                 if (typeof value === 'object' && value !== null) {
                     const collapsible = document.createElement('span');
                     collapsible.className = 'collapsible';
-                    collapsible.textContent = `${key}: ${Array.isArray(value) ? '[' : '{'}`;
+                    
+                    // Check if the object has a name property and display it
+                    // Don't display the opening braces for objects or arrays
+                    let displayText = `${key}: `;
+                    if (!Array.isArray(value) && value.name !== undefined) {
+                        displayText = `${key}: ${value.name}`;
+                    }
+                    collapsible.textContent = displayText;
+                    
                     collapsible.onclick = function(e) {
                         this.classList.toggle('expanded');
                         const content = this.nextElementSibling;
@@ -198,7 +206,8 @@ function createTree(data, currentPath = '', lineCounter = { value: 1 }) {
                     contentDiv.appendChild(createTree(value, newPath, lineCounter));
                     
                     const closingSymbol = document.createElement('span');
-                    closingSymbol.textContent = Array.isArray(value) ? ']' : '}';
+                    // Don't display the closing braces for objects or arrays
+                    closingSymbol.textContent = '';
                     
                     li.appendChild(collapsible);
                     li.appendChild(contentDiv);
