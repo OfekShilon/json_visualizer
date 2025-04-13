@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Visualizer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+        }
+        .collapsible::before {
+            content: '\25B6'; /* Right-pointing triangle */
+            position: absolute;
+            left: -15px;
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+        .collapsible.expanded::before {
+            content: '\25BC'; /* Down-pointing triangle */
+        }
+        .content {
+            display: none;
+            margin-left: 20px;
+        }
+        .single-value {
+            margin-left: 0;
+            display: inline;
+        }
+    </style>
+</head>
+<body>
+    <h1>JSON Visualizer</h1>
+    <div id="json-container">
+        <script>
+            function createTree(data) {
+                if (typeof data === 'object' && data !== null) {
+                    const ul = document.createElement('ul');
+                    for (const key in data) {
+                        const li = document.createElement('li');
+                        const value = data[key];
+                        
+                        // Check if value is a primitive (not an object or is null) or an empty object/array
+                        const isPrimitive = 
+                            value === null || 
+                            typeof value !== 'object' || 
+                            (Array.isArray(value) && value.length === 0) ||
+                            (Object.keys(value).length === 0);
+                            
+                        if (isPrimitive) {
+                            // For single values, display as "name : value" without collapse option
+                            li.textContent = key + " : " + (value === null ? "null" : 
+                                                         Array.isArray(value) && value.length === 0 ? "[]" : 
+                                                         typeof value === 'object' && Object.keys(value).length === 0 ? "{}" : 
+                                                         value);
+                        } else {
+                            // For objects and arrays, keep the collapsible functionality
+                            const span = document.createElement('span');
+                            span.textContent = key;
+                            span.classList.add('collapsible');
+                            li.appendChild(span);
+
+                            const content = document.createElement('div');
+                            content.classList.add('content');
+                            content.appendChild(createTree(data[key]));
+                            li.appendChild(content);
+
+                            span.addEventListener('click', () => {
+                                const isExpanded = content.style.display === 'block';
+                                content.style.display = isExpanded ? 'none' : 'block';
+                                span.classList.toggle('expanded', !isExpanded);
+                            });
+                        }
+                        
+                        ul.appendChild(li);
+                    }
+                    return ul;
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = data;
+                    return li;
+                }
+            }
+
+            const jsonData = {{ json_data|tojson|safe }};
+            const container = document.getElementById('json-container');
+            container.appendChild(createTree(jsonData));
+        </script>
+    </div>
+</body>
+</html>

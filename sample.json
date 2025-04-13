@@ -1,0 +1,20 @@
+{
+  "name": "JSON Visualizer Sample",
+  "version": "1.0.0",
+  "description": "A sample JSON file for testing the visualizer",
+  "nested": {
+    "array": [1, 2, 3, 4, 5],
+    "object": {
+      "key1": "value1",
+      "key2": "value2",
+      "deeply_nested": {
+        "more_data": true,
+        "numbers": [10, 20, 30],
+        "empty_object": {}
+      }
+    },
+    "boolean": true,
+    "null_value": null
+  },
+  "simple_array": ["apple", "banana", "cherry"]
+}
