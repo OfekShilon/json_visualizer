@@ -8,6 +8,12 @@
 </head>
 <body>
     <h1>JSON Visualizer</h1>
+    <div class="controls">
+        <label class="checkbox-container">
+            <input type="checkbox" id="hide-nulls">
+            <span class="checkbox-text">Hide nulls</span>
+        </label>
+    </div>
     <div id="json-container">
         <script>
             function createTree(data) {
@@ -18,8 +24,15 @@
                     const isArray = Array.isArray(data);
                     
                     for (const key in data) {
-                        const li = document.createElement('li');
                         const value = data[key];
+                        
+                        // Skip null values if hide-nulls is checked
+                        if (document.getElementById('hide-nulls').checked && value === null) {
+                            continue;
+                        }
+                        
+                        const li = document.createElement('li');
+                        li.dataset.valueType = value === null ? 'null' : typeof value;
                         
                         // Display name property for array items if available
                         let displayKey = key;
@@ -112,6 +125,16 @@
             const jsonData = {{ json_data|tojson|safe }};
             const container = document.getElementById('json-container');
             container.appendChild(createTree(jsonData));
+            
+            // Add event listener to the hide-nulls checkbox
+            document.getElementById('hide-nulls').addEventListener('change', function() {
+                // Remove the existing tree
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+                // Recreate the tree
+                container.appendChild(createTree(jsonData));
+            });
         </script>
     </div>
 </body>
