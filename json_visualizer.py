@@ -19,20 +19,23 @@ def load_json_file(file_path):
         print(f"Error: File {file_path} not found")
         exit(1)
 
-def generate_html(json_data, output_file=None):
+def generate_html(json_data, input_file, output_file=None):
     """
     Generate HTML visualization of JSON data using Jinja template
     """
     # Get the directory of the current script
     current_dir = os.path.dirname(os.path.abspath(__file__))
     
+    # Extract file name from the path
+    file_name = os.path.basename(input_file)
+    
     # Set up Jinja environment
     templates_dir = os.path.join(current_dir, 'templates')
     env = Environment(loader=FileSystemLoader(templates_dir))
     template = env.get_template('template.html')
     
-    # Render template with json data
-    html_content = template.render(json_data=json_data)
+    # Render template with json data and file name
+    html_content = template.render(json_data=json_data, file_name=file_name)
     
     # Determine output path
     if output_file:
@@ -91,7 +94,7 @@ def main():
     
     # Generate HTML visualization
     output_file = args.output
-    generate_html(json_data, output_file)
+    generate_html(json_data, args.json_file, output_file)
 
 if __name__ == "__main__":
     main()
