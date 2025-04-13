@@ -13,9 +13,19 @@
             function createTree(data) {
                 if (typeof data === 'object' && data !== null) {
                     const ul = document.createElement('ul');
+                    
+                    // Check if it's an array
+                    const isArray = Array.isArray(data);
+                    
                     for (const key in data) {
                         const li = document.createElement('li');
                         const value = data[key];
+                        
+                        // Display name property for array items if available
+                        let displayKey = key;
+                        if (isArray && typeof value === 'object' && value !== null && 'name' in value) {
+                            displayKey = `${key}: ${value.name}`;
+                        }
                         
                         // Check if value is a primitive (not an object or is null) or an empty object/array
                         const isPrimitive = 
@@ -27,7 +37,7 @@
                         if (isPrimitive) {
                             // For single values, display as "name : value" with color coding
                             const keySpan = document.createElement('span');
-                            keySpan.textContent = key;
+                            keySpan.textContent = displayKey;
                             keySpan.className = 'json-key';
                             li.appendChild(keySpan);
                             
@@ -57,7 +67,7 @@
                         } else {
                             // For objects and arrays, keep the collapsible functionality
                             const span = document.createElement('span');
-                            span.textContent = key;
+                            span.textContent = displayKey;
                             span.classList.add('collapsible', 'json-key');
                             li.appendChild(span);
 
