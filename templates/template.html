@@ -9,6 +9,10 @@
 <body>
     <h1>{{ file_name }}</h1>
     <div class="controls">
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Search JSON...">
+            <button id="search-button">Search</button>
+        </div>
         <label class="checkbox-container">
             <input type="checkbox" id="hide-nulls">
             <span class="checkbox-text">Hide nulls</span>
@@ -20,6 +24,91 @@
     </div>
     <div id="json-container" class="with-line-wrap">
         <script>
+            // Function to highlight text within a node
+            function highlightText(node, searchText) {
+                if (node.nodeType === 3) { // Text node
+                    const text = node.nodeValue;
+                    const lowerText = text.toLowerCase();
+                    const lowerSearchText = searchText.toLowerCase();
+                    
+                    if (lowerText.includes(lowerSearchText)) {
+                        const parts = text.split(new RegExp(`(${searchText})`, 'gi'));
+                        const fragment = document.createDocumentFragment();
+                        
+                        parts.forEach(part => {
+                            if (part.toLowerCase() === lowerSearchText) {
+                                const span = document.createElement('span');
+                                span.className = 'highlight';
+                                span.textContent = part;
+                                fragment.appendChild(span);
+                            } else {
+                                fragment.appendChild(document.createTextNode(part));
+                            }
+                        });
+                        
+                        node.parentNode.replaceChild(fragment, node);
+                        return true;
+                    }
+                    return false;
+                } else if (node.nodeType === 1) { // Element node
+                    // Skip highlight elements themselves
+                    if (node.classList && node.classList.contains('highlight')) {
+                        return false;
+                    }
+                    
+                    let found = false;
+                    const childNodes = [...node.childNodes]; // Create copy since the DOM could change during iteration
+                    
+                    childNodes.forEach(child => {
+                        found = highlightText(child, searchText) || found;
+                    });
+                    
+                    return found;
+                }
+                return false;
+            }
+            
+            // Function to remove all highlighting
+            function removeHighlights(node) {
+                const highlights = node.querySelectorAll('.highlight');
+                highlights.forEach(highlight => {
+                    const text = document.createTextNode(highlight.textContent);
+                    highlight.parentNode.replaceChild(text, highlight);
+                });
+                
+                // Normalize the text nodes
+                node.normalize();
+            }
+            
+            // Function to expand all nodes to matches
+            function expandToMatches(node, shouldExpand) {
+                if (!node || !node.classList) return false;
+                
+                // If this node has a highlight, we should expand all parent nodes
+                const hasHighlight = node.querySelector('.highlight') !== null;
+                
+                if (node.classList.contains('content')) {
+                    if (shouldExpand || hasHighlight) {
+                        node.style.display = 'block';
+                        const collapsible = node.previousElementSibling;
+                        if (collapsible && collapsible.classList.contains('collapsible')) {
+                            collapsible.classList.add('expanded');
+                        }
+                    }
+                }
+                
+                // Recursively process child nodes
+                const children = node.children;
+                let childHasHighlight = false;
+                
+                for (let i = 0; i < children.length; i++) {
+                    const childResult = expandToMatches(children[i], shouldExpand || hasHighlight);
+                    childHasHighlight = childHasHighlight || childResult;
+                }
+                
+                return hasHighlight || childHasHighlight;
+            }
+
             function createTree(data) {
                 if (typeof data === 'object' && data !== null) {
                     const ul = document.createElement('ul');
@@ -148,6 +237,28 @@
                 } else {
                     container.classList.remove('with-line-wrap');
                     container.classList.add('no-line-wrap');
+                }
+            });
+            
+            // Add event listener for search
+            function performSearch() {
+                const searchText = document.getElementById('search-input').value.trim();
+                if (searchText === '') return;
+                
+                // First, remove any existing highlights
+                removeHighlights(container);
+                
+                // Then search and highlight
+                highlightText(container, searchText);
+                
+                // Expand to matches
+                expandToMatches(container, false);
+            }
+            
+            document.getElementById('search-button').addEventListener('click', performSearch);
+            document.getElementById('search-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
                 }
             });
         </script>

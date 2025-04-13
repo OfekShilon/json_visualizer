@@ -16,10 +16,48 @@ ul {
 
 .controls {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
     margin: 0 auto 10px auto;
     max-width: 90%;
+}
+
+.search-container {
+    display: flex;
+    flex-grow: 1;
+    max-width: 400px;
+}
+
+#search-input {
+    flex-grow: 1;
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px 0 0 4px;
+    font-size: 14px;
+}
+
+#search-button {
+    padding: 6px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#search-button:hover {
+    background-color: #45a049;
+}
+
+.highlight {
+    background-color: #ffff00;
+    color: #000;
+    font-weight: bold;
+    padding: 0 1px;
+    border-radius: 2px;
 }
 
 .checkbox-container {
