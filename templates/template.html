@@ -4,43 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON Visualizer</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        ul {
-            list-style-type: none;
-            padding-left: 20px;
-        }
-        .collapsible {
-            cursor: pointer;
-            user-select: none;
-            position: relative;
-        }
-        .collapsible::before {
-            content: '\25B6'; /* Right-pointing triangle */
-            position: absolute;
-            left: -15px;
-            font-size: 12px;
-            transition: transform 0.2s;
-        }
-        .collapsible.expanded::before {
-            content: '\25BC'; /* Down-pointing triangle */
-        }
-        .content {
-            display: none;
-            margin-left: 20px;
-        }
-        .single-value {
-            margin-left: 0;
-            display: inline;
-        }
-    </style>
+    <link rel="stylesheet" href="static/css/json-visualizer.css">
 </head>
 <body>
     <h1>JSON Visualizer</h1>
@@ -61,16 +25,40 @@
                             (Object.keys(value).length === 0);
                             
                         if (isPrimitive) {
-                            // For single values, display as "name : value" without collapse option
-                            li.textContent = key + " : " + (value === null ? "null" : 
-                                                         Array.isArray(value) && value.length === 0 ? "[]" : 
-                                                         typeof value === 'object' && Object.keys(value).length === 0 ? "{}" : 
-                                                         value);
+                            // For single values, display as "name : value" with color coding
+                            const keySpan = document.createElement('span');
+                            keySpan.textContent = key;
+                            keySpan.className = 'json-key';
+                            li.appendChild(keySpan);
+                            
+                            li.appendChild(document.createTextNode(' : '));
+                            
+                            const valueSpan = document.createElement('span');
+                            if (value === null) {
+                                valueSpan.textContent = 'null';
+                                valueSpan.className = 'json-null';
+                            } else if (Array.isArray(value) && value.length === 0) {
+                                valueSpan.textContent = '[]';
+                                valueSpan.className = 'json-array-empty';
+                            } else if (typeof value === 'object' && Object.keys(value).length === 0) {
+                                valueSpan.textContent = '{}';
+                                valueSpan.className = 'json-object-empty';
+                            } else if (typeof value === 'number') {
+                                valueSpan.textContent = value;
+                                valueSpan.className = 'json-number';
+                            } else if (typeof value === 'boolean') {
+                                valueSpan.textContent = value;
+                                valueSpan.className = 'json-boolean';
+                            } else {
+                                valueSpan.textContent = value;
+                                valueSpan.className = 'json-value';
+                            }
+                            li.appendChild(valueSpan);
                         } else {
                             // For objects and arrays, keep the collapsible functionality
                             const span = document.createElement('span');
                             span.textContent = key;
-                            span.classList.add('collapsible');
+                            span.classList.add('collapsible', 'json-key');
                             li.appendChild(span);
 
                             const content = document.createElement('div');
@@ -90,7 +78,23 @@
                     return ul;
                 } else {
                     const li = document.createElement('li');
-                    li.textContent = data;
+                    
+                    // Color code different value types
+                    const valueSpan = document.createElement('span');
+                    if (data === null) {
+                        valueSpan.textContent = 'null';
+                        valueSpan.className = 'json-null';
+                    } else if (typeof data === 'number') {
+                        valueSpan.textContent = data;
+                        valueSpan.className = 'json-number';
+                    } else if (typeof data === 'boolean') {
+                        valueSpan.textContent = data;
+                        valueSpan.className = 'json-boolean';
+                    } else {
+                        valueSpan.textContent = data;
+                        valueSpan.className = 'json-value';
+                    }
+                    li.appendChild(valueSpan);
                     return li;
                 }
             }
