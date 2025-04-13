@@ -103,7 +103,7 @@ ul {
 .collapsible::before {
     content: '\25B6'; /* Right-pointing triangle */
     position: absolute;
-    left: -15px;
+    left: -18px; /* Increased from -15px to -18px to move it further left */
     font-size: 12px;
     transition: transform 0.2s;
     color: #7f8c8d; /* Grey for indicators */
@@ -185,11 +185,17 @@ ul {
 /* Add styling for line numbers */
 .line-number {
     display: inline-block;
-    min-width: 40px;
+    min-width: 60px; /* Increased from 40px to 60px to accommodate larger line numbers */
     color: #777;
     font-size: 0.9em;
     user-select: none;
     font-family: monospace;
+}
+
+/* Position the collapsible indicator with more space */
+li {
+    position: relative; /* Ensure proper positioning context for collapsible indicators */
+    padding-left: 5px; /* Add a bit more padding to list items */
 }
 
 /* Responsive design adjustments */
