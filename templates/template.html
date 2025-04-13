@@ -12,31 +12,40 @@
         <div class="search-container">
             <input type="text" id="search-input" placeholder="Search JSON...">
             <button id="search-button">Search</button>
+            <label class="checkbox-container search-option">
+                <input type="checkbox" id="case-sensitive">
+                <span class="checkbox-text">Case-sensitive search</span>
+            </label>
         </div>
-        <label class="checkbox-container">
-            <input type="checkbox" id="hide-nulls">
-            <span class="checkbox-text">Hide nulls</span>
-        </label>
-        <label class="checkbox-container">
-            <input type="checkbox" id="line-wrap" checked>
-            <span class="checkbox-text">Line wrap</span>
-        </label>
+        <div class="view-options">
+            <label class="checkbox-container">
+                <input type="checkbox" id="hide-nulls">
+                <span class="checkbox-text">Hide nulls</span>
+            </label>
+            <label class="checkbox-container">
+                <input type="checkbox" id="line-wrap" checked>
+                <span class="checkbox-text">Line wrap</span>
+            </label>
+        </div>
     </div>
     <div id="json-container" class="with-line-wrap">
         <script>
             // Function to highlight text within a node
-            function highlightText(node, searchText) {
+            function highlightText(node, searchText, caseSensitive) {
                 if (node.nodeType === 3) { // Text node
                     const text = node.nodeValue;
-                    const lowerText = text.toLowerCase();
-                    const lowerSearchText = searchText.toLowerCase();
+                    let lowerText = caseSensitive ? text : text.toLowerCase();
+                    let lowerSearchText = caseSensitive ? searchText : searchText.toLowerCase();
                     
                     if (lowerText.includes(lowerSearchText)) {
-                        const parts = text.split(new RegExp(`(${searchText})`, 'gi'));
+                        // For case-sensitive, use different regex flag
+                        const regexFlags = caseSensitive ? 'g' : 'gi';
+                        const parts = text.split(new RegExp(`(${searchText})`, regexFlags));
                         const fragment = document.createDocumentFragment();
                         
                         parts.forEach(part => {
-                            if (part.toLowerCase() === lowerSearchText) {
+                            if ((caseSensitive && part === searchText) || 
+                                (!caseSensitive && part.toLowerCase() === lowerSearchText)) {
                                 const span = document.createElement('span');
                                 span.className = 'highlight';
                                 span.textContent = part;
@@ -60,7 +69,7 @@
                     const childNodes = [...node.childNodes]; // Create copy since the DOM could change during iteration
                     
                     childNodes.forEach(child => {
-                        found = highlightText(child, searchText) || found;
+                        found = highlightText(child, searchText, caseSensitive) || found;
                     });
                     
                     return found;
@@ -80,33 +89,45 @@
                 node.normalize();
             }
             
-            // Function to expand all nodes to matches
-            function expandToMatches(node, shouldExpand) {
-                if (!node || !node.classList) return false;
+            // Function to expand nodes containing matches
+            function expandToMatches(element) {
+                // First, collapse all nodes
+                const allContents = document.querySelectorAll('.content');
+                const allCollapsibles = document.querySelectorAll('.collapsible');
                 
-                // If this node has a highlight, we should expand all parent nodes
-                const hasHighlight = node.querySelector('.highlight') !== null;
+                allContents.forEach(content => {
+                    content.style.display = 'none';
+                });
                 
-                if (node.classList.contains('content')) {
-                    if (shouldExpand || hasHighlight) {
-                        node.style.display = 'block';
-                        const collapsible = node.previousElementSibling;
-                        if (collapsible && collapsible.classList.contains('collapsible')) {
-                            collapsible.classList.add('expanded');
+                allCollapsibles.forEach(collapsible => {
+                    collapsible.classList.remove('expanded');
+                });
+                
+                // Now find all highlights
+                const highlights = document.querySelectorAll('.highlight');
+                
+                // For each highlight, expand its parent path
+                highlights.forEach(highlight => {
+                    // Walk up the DOM tree
+                    let currentElement = highlight;
+                    
+                    while (currentElement && currentElement !== element) {
+                        // If we find a content div, make it visible
+                        if (currentElement.classList && currentElement.classList.contains('content')) {
+                            currentElement.style.display = 'block';
+                            
+                            // Also expand its parent collapsible
+                            const collapsible = currentElement.previousElementSibling;
+                            if (collapsible && collapsible.classList.contains('collapsible')) {
+                                collapsible.classList.add('expanded');
+                            }
                         }
+                        
+                        currentElement = currentElement.parentElement;
                     }
-                }
+                });
                 
-                // Recursively process child nodes
-                const children = node.children;
-                let childHasHighlight = false;
-                
-                for (let i = 0; i < children.length; i++) {
-                    const childResult = expandToMatches(children[i], shouldExpand || hasHighlight);
-                    childHasHighlight = childHasHighlight || childResult;
-                }
-                
-                return hasHighlight || childHasHighlight;
+                return highlights.length > 0;
             }
 
             function createTree(data) {
@@ -245,14 +266,16 @@
                 const searchText = document.getElementById('search-input').value.trim();
                 if (searchText === '') return;
                 
+                const caseSensitive = document.getElementById('case-sensitive').checked;
+                
                 // First, remove any existing highlights
                 removeHighlights(container);
                 
-                // Then search and highlight
-                highlightText(container, searchText);
+                // Then search and highlight with case sensitivity option
+                highlightText(container, searchText, caseSensitive);
                 
-                // Expand to matches
-                expandToMatches(container, false);
+                // Only expand paths to matches
+                expandToMatches(container);
             }
             
             document.getElementById('search-button').addEventListener('click', performSearch);
