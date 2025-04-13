@@ -13,8 +13,12 @@
             <input type="checkbox" id="hide-nulls">
             <span class="checkbox-text">Hide nulls</span>
         </label>
+        <label class="checkbox-container">
+            <input type="checkbox" id="line-wrap" checked>
+            <span class="checkbox-text">Line wrap</span>
+        </label>
     </div>
-    <div id="json-container">
+    <div id="json-container" class="with-line-wrap">
         <script>
             function createTree(data) {
                 if (typeof data === 'object' && data !== null) {
@@ -134,6 +138,17 @@
                 }
                 // Recreate the tree
                 container.appendChild(createTree(jsonData));
+            });
+            
+            // Add event listener to the line-wrap checkbox
+            document.getElementById('line-wrap').addEventListener('change', function() {
+                if (this.checked) {
+                    container.classList.add('with-line-wrap');
+                    container.classList.remove('no-line-wrap');
+                } else {
+                    container.classList.remove('with-line-wrap');
+                    container.classList.add('no-line-wrap');
+                }
             });
         </script>
     </div>

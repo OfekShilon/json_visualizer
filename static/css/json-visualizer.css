@@ -17,6 +17,7 @@ ul {
 .controls {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     margin: 0 auto 10px auto;
     max-width: 90%;
 }
@@ -106,4 +107,28 @@ ul {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin: 20px auto;
     max-width: 90%;
+}
+
+/* Line wrap styles */
+.with-line-wrap li {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.no-line-wrap {
+    overflow-x: auto;
+}
+
+.no-line-wrap li {
+    white-space: nowrap;
+}
+
+.no-line-wrap ul {
+    white-space: nowrap;
+}
+
+/* Set a min-width so that horizontal scrolling works properly in no-wrap mode */
+.no-line-wrap #json-container {
+    min-width: 100%;
 }
