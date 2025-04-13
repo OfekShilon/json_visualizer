@@ -138,7 +138,7 @@ function getNodePath(element) {
     return path.join('.');
 }
 
-function createTree(data, currentPath = '') {
+function createTree(data, currentPath = '', lineCounter = { value: 1 }) {
     const ul = document.createElement('ul');
     
     if (typeof data === 'object' && data !== null) {
@@ -147,7 +147,16 @@ function createTree(data, currentPath = '') {
         // Handle empty arrays or objects
         if (Object.keys(data).length === 0) {
             const li = document.createElement('li');
-            li.innerHTML = `<span class="${isArray ? 'json-array-empty' : 'json-object-empty'}">${isArray ? '[]' : '{}'}</span>`;
+            // Add line number
+            const lineNumber = document.createElement('span');
+            lineNumber.className = 'line-number';
+            lineNumber.textContent = `${lineCounter.value++}: `;
+            li.appendChild(lineNumber);
+            
+            const valueSpan = document.createElement('span');
+            valueSpan.className = isArray ? 'json-array-empty' : 'json-object-empty';
+            valueSpan.textContent = isArray ? '[]' : '{}';
+            li.appendChild(valueSpan);
             ul.appendChild(li);
             return ul;
         }
@@ -159,9 +168,18 @@ function createTree(data, currentPath = '') {
                 const newPath = currentPath ? `${currentPath}.${key}` : key;
                 const li = document.createElement('li');
                 
+                // Add line number
+                const lineNumber = document.createElement('span');
+                lineNumber.className = 'line-number';
+                lineNumber.textContent = `${lineCounter.value++}: `;
+                li.appendChild(lineNumber);
+                
                 // Exclude null/undefined values if hide-nulls is checked
                 const hideNulls = document.getElementById('hide-nulls').checked;
-                if (hideNulls && (value === null || value === undefined)) continue;
+                if (hideNulls && (value === null || value === undefined)) {
+                    lineCounter.value--; // Decrement counter for skipped items
+                    continue;
+                }
                 
                 // Different display for objects and arrays vs primitive values
                 if (typeof value === 'object' && value !== null) {
@@ -177,7 +195,7 @@ function createTree(data, currentPath = '') {
                     
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'content';
-                    contentDiv.appendChild(createTree(value, newPath));
+                    contentDiv.appendChild(createTree(value, newPath, lineCounter));
                     
                     const closingSymbol = document.createElement('span');
                     closingSymbol.textContent = Array.isArray(value) ? ']' : '}';
@@ -201,7 +219,11 @@ function createTree(data, currentPath = '') {
                         formattedValue = `<span>${value}</span>`;
                     }
                     
-                    li.innerHTML = `<span class="json-key">${key}: </span>${formattedValue}`;
+                    const keySpan = document.createElement('span');
+                    keySpan.className = 'json-key';
+                    keySpan.textContent = `${key}: `;
+                    li.appendChild(keySpan);
+                    li.insertAdjacentHTML('beforeend', formattedValue);
                 }
                 
                 ul.appendChild(li);
@@ -211,17 +233,23 @@ function createTree(data, currentPath = '') {
         const li = document.createElement('li');
         li.className = 'single-value';
         
+        // Add line number
+        const lineNumber = document.createElement('span');
+        lineNumber.className = 'line-number';
+        lineNumber.textContent = `${lineCounter.value++}: `;
+        li.appendChild(lineNumber);
+        
         // Format the value based on its type
         if (data === null) {
-            li.innerHTML = `<span class="json-null">null</span>`;
+            li.innerHTML += `<span class="json-null">null</span>`;
         } else if (typeof data === 'string') {
-            li.innerHTML = `<span class="json-value">"${data}"</span>`;
+            li.innerHTML += `<span class="json-value">"${data}"</span>`;
         } else if (typeof data === 'number') {
-            li.innerHTML = `<span class="json-number">${data}</span>`;
+            li.innerHTML += `<span class="json-number">${data}</span>`;
         } else if (typeof data === 'boolean') {
-            li.innerHTML = `<span class="json-boolean">${data}</span>`;
+            li.innerHTML += `<span class="json-boolean">${data}</span>`;
         } else {
-            li.innerHTML = `<span>${data}</span>`;
+            li.innerHTML += `<span>${data}</span>`;
         }
         
         ul.appendChild(li);
@@ -273,6 +301,21 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             container.classList.remove('with-line-wrap');
             container.classList.add('no-line-wrap');
+        }
+    });
+    
+    // Add event listener to the show-line-numbers checkbox
+    document.getElementById('show-line-numbers').addEventListener('change', function() {
+        const lineNumbers = document.querySelectorAll('.line-number');
+        
+        if (this.checked) {
+            lineNumbers.forEach(el => {
+                el.style.display = 'inline-block';
+            });
+        } else {
+            lineNumbers.forEach(el => {
+                el.style.display = 'none';
+            });
         }
     });
     

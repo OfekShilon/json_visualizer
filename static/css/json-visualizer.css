@@ -182,6 +182,16 @@ ul {
     min-width: 100%;
 }
 
+/* Add styling for line numbers */
+.line-number {
+    display: inline-block;
+    min-width: 40px;
+    color: #777;
+    font-size: 0.9em;
+    user-select: none;
+    font-family: monospace;
+}
+
 /* Responsive design adjustments */
 @media (max-width: 768px) {
     .controls {
