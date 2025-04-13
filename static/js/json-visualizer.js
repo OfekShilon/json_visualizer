@@ -1,112 +1,96 @@
 // Function to highlight text within a node
 function highlightText(node, searchText, caseSensitive) {
-    if (node.nodeType === 3) { // Text node
-        const text = node.nodeValue;
-        let lowerText = caseSensitive ? text : text.toLowerCase();
-        let lowerSearchText = caseSensitive ? searchText : searchText.toLowerCase();
+    if (node.nodeType === Node.TEXT_NODE) {
+        const nodeText = node.textContent;
+        const searchTextToUse = caseSensitive ? searchText : searchText.toLowerCase();
+        const textToSearch = caseSensitive ? nodeText : nodeText.toLowerCase();
+        const index = textToSearch.indexOf(searchTextToUse);
         
-        if (lowerText.includes(lowerSearchText)) {
-            // For case-sensitive, use different regex flag
-            const regexFlags = caseSensitive ? 'g' : 'gi';
-            const parts = text.split(new RegExp(`(${searchText})`, regexFlags));
-            const fragment = document.createDocumentFragment();
+        if (index >= 0) {
+            // Create a highlight element
+            const highlightEl = document.createElement('span');
+            highlightEl.className = 'highlight';
             
-            parts.forEach(part => {
-                if ((caseSensitive && part === searchText) || 
-                    (!caseSensitive && part.toLowerCase() === lowerSearchText)) {
-                    const span = document.createElement('span');
-                    span.className = 'highlight';
-                    span.textContent = part;
-                    fragment.appendChild(span);
-                } else {
-                    fragment.appendChild(document.createTextNode(part));
-                }
-            });
+            // Extract the matched text to preserve original case
+            const matchedText = nodeText.substring(index, index + searchText.length);
+            highlightEl.textContent = matchedText;
             
-            node.parentNode.replaceChild(fragment, node);
+            // Text before the match
+            const beforeText = document.createTextNode(nodeText.substring(0, index));
+            // Text after the match
+            const afterText = document.createTextNode(nodeText.substring(index + searchText.length));
+            
+            // Replace the text node with the highlighted version
+            const parent = node.parentNode;
+            parent.insertBefore(beforeText, node);
+            parent.insertBefore(highlightEl, node);
+            parent.insertBefore(afterText, node);
+            parent.removeChild(node);
+            
             return true;
         }
-        return false;
-    } else if (node.nodeType === 1) { // Element node
-        // Skip highlight elements themselves
-        if (node.classList && node.classList.contains('highlight')) {
-            return false;
-        }
-        
+    } else if (node.nodeType === Node.ELEMENT_NODE && 
+              !node.classList.contains('highlight')) {
         let found = false;
-        const childNodes = [...node.childNodes]; // Create copy since the DOM could change during iteration
+        const childNodes = Array.from(node.childNodes);
         
         childNodes.forEach(child => {
-            found = highlightText(child, searchText, caseSensitive) || found;
+            if (highlightText(child, searchText, caseSensitive)) {
+                found = true;
+            }
         });
         
         return found;
     }
+    
     return false;
 }
 
 // Function to remove all highlighting
 function removeHighlights(node) {
     const highlights = node.querySelectorAll('.highlight');
+    
     highlights.forEach(highlight => {
+        const parent = highlight.parentNode;
         const text = document.createTextNode(highlight.textContent);
-        highlight.parentNode.replaceChild(text, highlight);
+        parent.replaceChild(text, highlight);
     });
     
-    // Normalize the text nodes
+    // Also normalize the text nodes to ensure proper text searching
     node.normalize();
 }
 
 // Function to expand nodes containing matches
 function expandToMatches(element) {
-    // First, collapse all nodes
-    const allContents = document.querySelectorAll('.content');
-    const allCollapsibles = document.querySelectorAll('.collapsible');
+    const highlights = element.querySelectorAll('.highlight');
     
-    allContents.forEach(content => {
-        content.style.display = 'none';
-    });
-    
-    allCollapsibles.forEach(collapsible => {
-        collapsible.classList.remove('expanded');
-    });
-    
-    // Now find all highlights
-    const highlights = document.querySelectorAll('.highlight');
-    
-    // For each highlight, expand its parent path
     highlights.forEach(highlight => {
-        // Walk up the DOM tree
-        let currentElement = highlight;
+        let parent = highlight.parentNode;
         
-        while (currentElement && currentElement !== element) {
-            // If we find a content div, make it visible
-            if (currentElement.classList && currentElement.classList.contains('content')) {
-                currentElement.style.display = 'block';
+        // Traverse up the DOM to find and expand all parent content nodes
+        while (parent && parent !== element) {
+            if (parent.classList && parent.classList.contains('content')) {
+                parent.style.display = 'block';
                 
-                // Also expand its parent collapsible
-                const collapsible = currentElement.previousElementSibling;
+                // Also expand the parent collapsible
+                const collapsible = parent.previousElementSibling;
                 if (collapsible && collapsible.classList.contains('collapsible')) {
                     collapsible.classList.add('expanded');
                 }
             }
-            
-            currentElement = currentElement.parentElement;
+            parent = parent.parentNode;
         }
     });
-    
-    return highlights.length > 0;
 }
 
 // Function to save the expanded state of all nodes
 function saveExpandedState() {
     const expandedState = {};
-    const collapsibles = document.querySelectorAll('.collapsible');
+    const collapsibleElements = document.querySelectorAll('.collapsible');
     
-    collapsibles.forEach((collapsible, index) => {
-        const isExpanded = collapsible.classList.contains('expanded');
-        const path = getNodePath(collapsible);
-        expandedState[path] = isExpanded;
+    collapsibleElements.forEach(element => {
+        const path = getNodePath(element);
+        expandedState[path] = element.classList.contains('expanded');
     });
     
     return expandedState;
@@ -114,15 +98,19 @@ function saveExpandedState() {
 
 // Function to restore the expanded state of nodes
 function restoreExpandedState(expandedState) {
-    const collapsibles = document.querySelectorAll('.collapsible');
+    const collapsibleElements = document.querySelectorAll('.collapsible');
     
-    collapsibles.forEach((collapsible) => {
-        const path = getNodePath(collapsible);
+    collapsibleElements.forEach(element => {
+        const path = getNodePath(element);
         if (expandedState[path]) {
-            collapsible.classList.add('expanded');
-            const content = collapsible.nextElementSibling;
-            if (content && content.classList.contains('content')) {
-                content.style.display = 'block';
+            element.classList.add('expanded');
+            if (element.nextElementSibling && element.nextElementSibling.classList.contains('content')) {
+                element.nextElementSibling.style.display = 'block';
+            }
+        } else {
+            element.classList.remove('expanded');
+            if (element.nextElementSibling && element.nextElementSibling.classList.contains('content')) {
+                element.nextElementSibling.style.display = 'none';
             }
         }
     });
@@ -130,147 +118,116 @@ function restoreExpandedState(expandedState) {
 
 // Function to get a unique path for a node
 function getNodePath(element) {
-    let path = [];
+    const path = [];
     let current = element;
     
-    // Walk up to the ul parent
-    while (current && current.tagName !== 'UL') {
-        current = current.parentElement;
-    }
-    
-    if (!current) return '';
-    
-    // Find the li that contains this element
-    const li = element.closest('li');
-    if (!li) return '';
-    
-    // Get the text content of the node (the key)
-    const key = element.textContent;
-    
-    // Find the index of this li among its siblings
-    const liIndex = Array.from(current.children).indexOf(li);
-    
-    // Get the parent ul's path
-    let parentUl = current.parentElement;
-    if (parentUl && parentUl.tagName === 'DIV' && parentUl.classList.contains('content')) {
-        parentUl = parentUl.parentElement;
-    }
-    
-    if (parentUl && parentUl.tagName === 'LI') {
-        const parentCollapsible = parentUl.querySelector('.collapsible');
-        if (parentCollapsible) {
-            path.unshift(getNodePath(parentCollapsible));
+    while (current && current.parentNode) {
+        const parent = current.parentNode;
+        const children = Array.from(parent.children);
+        
+        if (children.length > 0) {
+            const index = children.indexOf(current);
+            if (index > -1) {
+                path.unshift(index);
+            }
         }
+        
+        current = parent;
     }
     
-    path.push(key + ':' + liIndex);
-    return path.join('/');
+    return path.join('.');
 }
 
-function createTree(data) {
+function createTree(data, currentPath = '') {
+    const ul = document.createElement('ul');
+    
     if (typeof data === 'object' && data !== null) {
-        const ul = document.createElement('ul');
-        
-        // Check if it's an array
         const isArray = Array.isArray(data);
         
-        for (const key in data) {
-            const value = data[key];
-            
-            // Skip null values if hide-nulls is checked
-            if (document.getElementById('hide-nulls').checked && value === null) {
-                continue;
-            }
-            
+        // Handle empty arrays or objects
+        if (Object.keys(data).length === 0) {
             const li = document.createElement('li');
-            li.dataset.valueType = value === null ? 'null' : typeof value;
-            
-            // Display name property for array items if available
-            let displayKey = key;
-            if (isArray && typeof value === 'object' && value !== null && 'name' in value) {
-                displayKey = `${key}: ${value.name}`;
-            }
-            
-            // Check if value is a primitive (not an object or is null) or an empty object/array
-            const isPrimitive = 
-                value === null || 
-                typeof value !== 'object' || 
-                (Array.isArray(value) && value.length === 0) ||
-                (Object.keys(value).length === 0);
-                
-            if (isPrimitive) {
-                // For single values, display as "name : value" with color coding
-                const keySpan = document.createElement('span');
-                keySpan.textContent = displayKey;
-                keySpan.className = 'json-key';
-                li.appendChild(keySpan);
-                
-                li.appendChild(document.createTextNode(' : '));
-                
-                const valueSpan = document.createElement('span');
-                if (value === null) {
-                    valueSpan.textContent = 'null';
-                    valueSpan.className = 'json-null';
-                } else if (Array.isArray(value) && value.length === 0) {
-                    valueSpan.textContent = '[]';
-                    valueSpan.className = 'json-array-empty';
-                } else if (typeof value === 'object' && Object.keys(value).length === 0) {
-                    valueSpan.textContent = '{}';
-                    valueSpan.className = 'json-object-empty';
-                } else if (typeof value === 'number') {
-                    valueSpan.textContent = value;
-                    valueSpan.className = 'json-number';
-                } else if (typeof value === 'boolean') {
-                    valueSpan.textContent = value;
-                    valueSpan.className = 'json-boolean';
-                } else {
-                    valueSpan.textContent = value;
-                    valueSpan.className = 'json-value';
-                }
-                li.appendChild(valueSpan);
-            } else {
-                // For objects and arrays, keep the collapsible functionality
-                const span = document.createElement('span');
-                span.textContent = displayKey;
-                span.classList.add('collapsible', 'json-key');
-                li.appendChild(span);
-
-                const content = document.createElement('div');
-                content.classList.add('content');
-                content.appendChild(createTree(data[key]));
-                li.appendChild(content);
-
-                span.addEventListener('click', () => {
-                    const isExpanded = content.style.display === 'block';
-                    content.style.display = isExpanded ? 'none' : 'block';
-                    span.classList.toggle('expanded', !isExpanded);
-                });
-            }
-            
+            li.innerHTML = `<span class="${isArray ? 'json-array-empty' : 'json-object-empty'}">${isArray ? '[]' : '{}'}</span>`;
             ul.appendChild(li);
+            return ul;
         }
-        return ul;
+        
+        // Process each property
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                const value = data[key];
+                const newPath = currentPath ? `${currentPath}.${key}` : key;
+                const li = document.createElement('li');
+                
+                // Exclude null/undefined values if hide-nulls is checked
+                const hideNulls = document.getElementById('hide-nulls').checked;
+                if (hideNulls && (value === null || value === undefined)) continue;
+                
+                // Different display for objects and arrays vs primitive values
+                if (typeof value === 'object' && value !== null) {
+                    const collapsible = document.createElement('span');
+                    collapsible.className = 'collapsible';
+                    collapsible.textContent = `${key}: ${Array.isArray(value) ? '[' : '{'}`;
+                    collapsible.onclick = function(e) {
+                        this.classList.toggle('expanded');
+                        const content = this.nextElementSibling;
+                        content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                        e.stopPropagation();
+                    };
+                    
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'content';
+                    contentDiv.appendChild(createTree(value, newPath));
+                    
+                    const closingSymbol = document.createElement('span');
+                    closingSymbol.textContent = Array.isArray(value) ? ']' : '}';
+                    
+                    li.appendChild(collapsible);
+                    li.appendChild(contentDiv);
+                    contentDiv.appendChild(closingSymbol);
+                } else {
+                    let formattedValue = '';
+                    
+                    // Format the value based on its type
+                    if (value === null) {
+                        formattedValue = `<span class="json-null">null</span>`;
+                    } else if (typeof value === 'string') {
+                        formattedValue = `<span class="json-value">"${value}"</span>`;
+                    } else if (typeof value === 'number') {
+                        formattedValue = `<span class="json-number">${value}</span>`;
+                    } else if (typeof value === 'boolean') {
+                        formattedValue = `<span class="json-boolean">${value}</span>`;
+                    } else {
+                        formattedValue = `<span>${value}</span>`;
+                    }
+                    
+                    li.innerHTML = `<span class="json-key">${key}: </span>${formattedValue}`;
+                }
+                
+                ul.appendChild(li);
+            }
+        }
     } else {
         const li = document.createElement('li');
+        li.className = 'single-value';
         
-        // Color code different value types
-        const valueSpan = document.createElement('span');
+        // Format the value based on its type
         if (data === null) {
-            valueSpan.textContent = 'null';
-            valueSpan.className = 'json-null';
+            li.innerHTML = `<span class="json-null">null</span>`;
+        } else if (typeof data === 'string') {
+            li.innerHTML = `<span class="json-value">"${data}"</span>`;
         } else if (typeof data === 'number') {
-            valueSpan.textContent = data;
-            valueSpan.className = 'json-number';
+            li.innerHTML = `<span class="json-number">${data}</span>`;
         } else if (typeof data === 'boolean') {
-            valueSpan.textContent = data;
-            valueSpan.className = 'json-boolean';
+            li.innerHTML = `<span class="json-boolean">${data}</span>`;
         } else {
-            valueSpan.textContent = data;
-            valueSpan.className = 'json-value';
+            li.innerHTML = `<span>${data}</span>`;
         }
-        li.appendChild(valueSpan);
-        return li;
+        
+        ul.appendChild(li);
     }
+    
+    return ul;
 }
 
 // Initialize the visualizer when the DOM is fully loaded
@@ -296,10 +253,10 @@ document.addEventListener('DOMContentLoaded', function() {
             container.removeChild(container.firstChild);
         }
         
-        // Recreate the tree
+        // Create the tree
         container.appendChild(createTree(jsonData));
         
-        // Restore the expanded state
+        // Restore the previous expanded state
         restoreExpandedState(expandedState);
         
         // Reapply search highlights if there was an active search
