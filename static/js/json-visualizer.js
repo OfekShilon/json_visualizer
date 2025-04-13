@@ -98,6 +98,75 @@ function expandToMatches(element) {
     return highlights.length > 0;
 }
 
+// Function to save the expanded state of all nodes
+function saveExpandedState() {
+    const expandedState = {};
+    const collapsibles = document.querySelectorAll('.collapsible');
+    
+    collapsibles.forEach((collapsible, index) => {
+        const isExpanded = collapsible.classList.contains('expanded');
+        const path = getNodePath(collapsible);
+        expandedState[path] = isExpanded;
+    });
+    
+    return expandedState;
+}
+
+// Function to restore the expanded state of nodes
+function restoreExpandedState(expandedState) {
+    const collapsibles = document.querySelectorAll('.collapsible');
+    
+    collapsibles.forEach((collapsible) => {
+        const path = getNodePath(collapsible);
+        if (expandedState[path]) {
+            collapsible.classList.add('expanded');
+            const content = collapsible.nextElementSibling;
+            if (content && content.classList.contains('content')) {
+                content.style.display = 'block';
+            }
+        }
+    });
+}
+
+// Function to get a unique path for a node
+function getNodePath(element) {
+    let path = [];
+    let current = element;
+    
+    // Walk up to the ul parent
+    while (current && current.tagName !== 'UL') {
+        current = current.parentElement;
+    }
+    
+    if (!current) return '';
+    
+    // Find the li that contains this element
+    const li = element.closest('li');
+    if (!li) return '';
+    
+    // Get the text content of the node (the key)
+    const key = element.textContent;
+    
+    // Find the index of this li among its siblings
+    const liIndex = Array.from(current.children).indexOf(li);
+    
+    // Get the parent ul's path
+    let parentUl = current.parentElement;
+    if (parentUl && parentUl.tagName === 'DIV' && parentUl.classList.contains('content')) {
+        parentUl = parentUl.parentElement;
+    }
+    
+    if (parentUl && parentUl.tagName === 'LI') {
+        const parentCollapsible = parentUl.querySelector('.collapsible');
+        if (parentCollapsible) {
+            path.unshift(getNodePath(parentCollapsible));
+        }
+    }
+    
+    path.push(key + ':' + liIndex);
+    return path.join('/');
+}
+
 function createTree(data) {
     if (typeof data === 'object' && data !== null) {
         const ul = document.createElement('ul');
@@ -208,16 +277,35 @@ function createTree(data) {
 document.addEventListener('DOMContentLoaded', function() {
     const jsonData = JSON.parse(document.getElementById('json-data').textContent);
     const container = document.getElementById('json-container');
+    let currentSearchText = '';
+    let isSearchCaseSensitive = false;
+    
     container.appendChild(createTree(jsonData));
     
     // Add event listener to the hide-nulls checkbox
     document.getElementById('hide-nulls').addEventListener('change', function() {
+        // Save the search state
+        currentSearchText = document.getElementById('search-input').value.trim();
+        isSearchCaseSensitive = document.getElementById('case-sensitive').checked;
+        
+        // Save the expanded state
+        const expandedState = saveExpandedState();
+        
         // Remove the existing tree
         while (container.firstChild) {
             container.removeChild(container.firstChild);
         }
+        
         // Recreate the tree
         container.appendChild(createTree(jsonData));
+        
+        // Restore the expanded state
+        restoreExpandedState(expandedState);
+        
+        // Reapply search highlights if there was an active search
+        if (currentSearchText) {
+            highlightText(container, currentSearchText, isSearchCaseSensitive);
+        }
     });
     
     // Add event listener to the line-wrap checkbox
@@ -238,6 +326,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const caseSensitive = document.getElementById('case-sensitive').checked;
         
+        // Save current search parameters for later reuse
+        currentSearchText = searchText;
+        isSearchCaseSensitive = caseSensitive;
+        
         // First, remove any existing highlights
         removeHighlights(container);
         
@@ -252,6 +344,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('search-input').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             performSearch();
+        }
+    });
+    
+    // Also add event listener to the case-sensitive checkbox
+    document.getElementById('case-sensitive').addEventListener('change', function() {
+        if (currentSearchText) {
+            // Re-run the search with the new case sensitivity setting
+            const searchText = document.getElementById('search-input').value.trim();
+            isSearchCaseSensitive = this.checked;
+            
+            // First, remove any existing highlights
+            removeHighlights(container);
+            
+            // Then search and highlight with case sensitivity option
+            highlightText(container, searchText, isSearchCaseSensitive);
         }
     });
 });
